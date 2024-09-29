@@ -1,0 +1,7 @@
+- name: Deploy Dockerized Web Application
+  hosts: all
+  become: true
+  roles:
+    - common
+    - docker
+    - app

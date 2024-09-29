@@ -1,0 +1,64 @@
+- name: create directory for docker's GPG key
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+
+- name: add GPG key
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    keyring: /etc/apt/keyrings/docker.gpg
+    state: present
+
+- name: add docker repository
+  apt_repository:
+    repo: deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu jammy stable
+    state: present
+    update_cache: yes
+
+- name: apt update
+  apt:
+    update_cache: yes
+
+- name: docker install
+  apt: name={{ item }}
+       update_cache=yes
+       state=latest
+  loop:
+    - docker-ce
+    - docker-ce-cli
+    - containerd.io
+    - docker-buildx-plugin
+    - docker-compose-plugin
+
+- name: Ensure group "docker" exists
+  ansible.builtin.group:
+    name: docker
+    state: present
+
+- name: adding ansible_user to docker group
+  user:
+    name: "{{ ansible_user }}"
+    groups: docker
+    append: yes
+
+- name: enable and start docker services
+  systemd:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop:
+    - docker.service
+    - containerd.service
+
+- name: docker-compose install
+  get_url:
+    url: https://github.com/docker/compose/releases/download/v2.28.1/docker-compose-linux-x86_64
+    dest: /usr/local/bin/docker-compose
+    mode: 'u+x,g+x'
+
+- name: change file ownership
+  ansible.builtin.file:
+    path: /usr/local/bin/docker-compose
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"

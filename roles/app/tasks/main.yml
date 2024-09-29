@@ -1,0 +1,53 @@
+- name: create /app directory (if doesn't exist)
+  ansible.builtin.file:
+    path: /app
+    state: directory
+  become: yes
+
+- name: create /app/mysql directory (if doesn't exist)
+  ansible.builtin.file:
+    path: /app/mysql
+    state: directory
+  become: yes
+
+- name: create /app/www/html directory (if doesn't exist)
+  ansible.builtin.file:
+    path: /app/www/html
+    state: directory
+  become: yes
+
+- name: change ownership /app directory
+  ansible.builtin.file:
+    path: /app
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0755'
+    recurse: yes
+  become: yes
+
+- name: Copy nginx configuration in place.
+  template:
+    src: "templates/default.conf.j2"
+    dest: "/app/default.conf"
+
+- name: Copy nginx configuration in place.
+  template:
+    src: "templates/nginx.conf.j2"
+    dest: "/app/nginx.conf"
+
+- name: copy docker-compose and nginx files
+  ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+  with_items:
+    - { src: 'files/Dockerfile', dest: '/app/Dockerfile' }
+    - { src: 'files/docker-compose.yml', dest: '/app/docker-compose.yml' }
+#    - { src: 'files/app/default.conf', dest: '/app/default.conf' }
+#    - { src: 'files/app/nginx.conf', dest: '/app/nginx.conf' }
+    - { src: 'files/app/info.php', dest: '/app/www/html/info.php' }
+    - { src: 'files/app/index.php', dest: '/app/www/html/index.php' }
+
+- name: run docker-compose
+  command: docker-compose up -d
+  args:
+    chdir: /app
